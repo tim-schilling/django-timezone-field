@@ -4,7 +4,7 @@ import pytz
 
 from django import forms
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, connection
 from django.db.migrations.writer import MigrationWriter
 from django.test import TestCase
 from django.utils import six
@@ -289,6 +289,7 @@ class TimeZoneFieldDeconstructTestCase(TestCase):
 
     test_fields = (
         TimeZoneField(),
+        TimeZoneField(default='UTC'),
         TimeZoneField(max_length=42),
         TimeZoneField(choices=[
             (pytz.timezone('US/Pacific'), 'US/Pacific'),
@@ -315,6 +316,15 @@ class TimeZoneFieldDeconstructTestCase(TestCase):
         for field in self.test_fields:
             # ensuring the following call doesn't throw an error
             MigrationWriter.serialize(field)
+
+    def test_from_db_value(self):
+        """
+        Verify that the field can handle data coming back as bytes from the
+        db.
+        """
+        field = TimeZoneField()
+        value = field.from_db_value(b'UTC', None, None, None)
+        self.assertEqual(pytz.UTC, value)
 
     def test_default_kwargs_not_frozen(self):
         """
